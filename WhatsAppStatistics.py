@@ -27,39 +27,49 @@ def dialog(text, message_type):
 def parse_txt_file():
     txt_file_path = path_entry.get()
     try:
+
+        # Validate input
         if len(txt_file_path) == 0:
             raise Exception("txt file path is empty, please select file")
 
+        # Open fle
         lines = codecs.open(txt_file_path, encoding='utf-8')
-
         dic = dict()
 
+        # Parse each line to get the message owner name
         for line in lines:
             if line.__contains__('האבטחה'.decode('UTF-8')) or line.lower().__contains__('security'):
                 continue
             try:
                 a = line.split(' ')
+                # In case the name is not save in contacts and it's represented as a number
                 if a[4].__contains__('+'):
                     name = a[4] + a[5]
                     dic[name] = dic.get(name, 0) + 1
                 else:
+                    # In case the name is saved in contacts
                     a = line.split('-')[1].split(':')[0]
                     dic[a] = dic.get(a, 0) + 1
             except Exception as e:
                 x = e
 
+        # Move all the data into list of tuples
         tuples = []
         for name, count in dic.iteritems():
             if count > 5:
                 tuples.append((name, count))
 
+        # Sort the list
         tuples.sort(key=lambda xx: xx[1])
+
+        # Create two lost for the plot X and Y bars
         names = []
         counts = []
         for x in tuples:
             name = x[0]
             count = x[1]
             print x[0], ':', x[1]
+            # In case the name is in hebrew we should reverse it for the printing
             if any(u"\u0590" <= c <= u"\u05EA" for c in name):
                 name = name[::-1]
             names.append(name)

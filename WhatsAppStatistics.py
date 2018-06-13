@@ -62,7 +62,7 @@ def parse_txt_file():
         # Sort the list
         tuples.sort(key=lambda xx: xx[1])
 
-        # Create two lost for the plot X and Y bars
+        # Create two list for the plot X and Y bars
         names = []
         counts = []
         for x in tuples:
@@ -133,7 +133,7 @@ def show_plot(counts, names):
 
 root = Tk()
 root.title('WhatsApp Statistics')
-root.geometry("600x140")
+root.geometry("500x80")
 
 mf = Frame(root)
 mf.pack()

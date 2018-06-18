@@ -1,11 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import codecs
+import datetime
+
 import matplotlib.pyplot as plt
 from bokeh.models import pd
 from tkFileDialog import askopenfilename
 from Tkinter import *
 import tkMessageBox
+from dateutil.parser import parse
+
+delimiter = None
 
 
 # ~~~~ FUNCTIONS~~~~
@@ -24,6 +30,34 @@ def dialog(text, message_type):
         tkMessageBox.showerror(title="", message=text, parent=root, type=tkMessageBox.OK)
 
 
+def get_name_and_date(line):
+    name = None
+    date = None
+    try:
+        a = line.split(' ')
+        if radio_var.get() == 1:
+            date = a[0]
+        else:
+            date = a[0].split('[')[1]
+        # In case the name is not save in contacts and it's represented as a number
+        if a[4].__contains__('+'):
+            name = a[4] + a[5]
+        else:
+            # In case the name is saved in contacts
+            name = line.split(delimiter)[1].split(':')[0]
+    except Exception as e:
+        x = e
+    return name, date
+
+
+def get_radio_var_delimiter():
+    global delimiter
+    if radio_var.get() == 1:
+        delimiter = '-'
+    if radio_var.get() == 2:
+        delimiter = ']'
+
+
 def parse_txt_file():
     txt_file_path = path_entry.get()
     try:
@@ -35,28 +69,35 @@ def parse_txt_file():
         # Open fle
         lines = codecs.open(txt_file_path, encoding='utf-8')
         dic = dict()
+        last_days_filter = False
+        today = None
+        margin = None
+        get_radio_var_delimiter()
+        if number_of_days.get() != '' or len(number_of_days.get()) > 0:
+            last_days_filter = True
+            today = datetime.date.today()
+            margin = datetime.timedelta(days=int(number_of_days.get()))
 
         # Parse each line to get the message owner name
         for line in lines:
             if line.__contains__('האבטחה'.decode('UTF-8')) or line.lower().__contains__('security'):
                 continue
             try:
-                a = line.split(' ')
-                # In case the name is not save in contacts and it's represented as a number
-                if a[4].__contains__('+'):
-                    name = a[4] + a[5]
+                name, i_date = get_name_and_date(line)
+                if name is None:
+                    continue
+                date = parse(i_date)
+                if last_days_filter:
+                    if today >= datetime.date(date.year, date.month, date.day) >= today - margin:
+                        dic[name] = dic.get(name, 0) + 1
+                if not last_days_filter:
                     dic[name] = dic.get(name, 0) + 1
-                else:
-                    # In case the name is saved in contacts
-                    a = line.split('-')[1].split(':')[0]
-                    dic[a] = dic.get(a, 0) + 1
             except Exception as e:
-                x = e
-
+                x = 1
         # Move all the data into list of tuples
         tuples = []
         for name, count in dic.iteritems():
-            if count > 5:
+            if count > 1:
                 tuples.append((name, count))
 
         # Sort the list
@@ -76,6 +117,7 @@ def parse_txt_file():
             counts.append(count)
 
         show_plot(counts, names)
+
     except Exception as e:
         dialog(str(e), "error")
 
@@ -133,7 +175,7 @@ def show_plot(counts, names):
 
 root = Tk()
 root.title('WhatsApp Statistics')
-root.geometry("500x80")
+root.geometry("550x140")
 
 mf = Frame(root)
 mf.pack()
@@ -150,8 +192,21 @@ path_entry = Entry(f1, width=50, textvariable=file_path)
 path_entry.grid(row=0, column=1, padx=2, pady=2, sticky='we', columnspan=25)
 Button(f1, text="Browse", command=open_file).grid(row=0, column=27, padx=8, pady=4)
 
+# Number Days Back filter
+number_of_days = StringVar()
+Label(f1, text="Messages in last days:").grid(row=1, column=0, sticky='e')
+number_of_days_entry = Entry(f1, width=50, textvariable=number_of_days)
+number_of_days_entry.grid(row=1, column=1, padx=2, pady=2, sticky='we', columnspan=25)
+Label(f1, text="Leave empty for all messages").grid(row=2, column=0, sticky='e')
+Button(f1, text="Browse", command=open_file).grid(row=0, column=27, padx=8, pady=4)
+
+radio_var = IntVar()
+radio_var.set(1)
+Radiobutton(f1, text="Android", variable=radio_var, value=1).grid(row=3, column=1, sticky=W)
+Radiobutton(f1, text="IPhone", variable=radio_var, value=2).grid(row=3, column=2, sticky=W)
+
 # Buttons
-Button(f2, text="Pre-process", width=32, command=parse_txt_file).grid(row=0)
+Button(f2, text="Process", width=32, command=parse_txt_file).grid(row=0)
 
 root.mainloop()
 # ~~~~~~~~~~~~~~~~~~~
